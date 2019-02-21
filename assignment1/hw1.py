@@ -1,24 +1,26 @@
 #############################################################
-## ASSIGNMENT 1 CODE SKELETON
-## RELEASED: 2/6/2019
-## DUE: 2/15/2019
-## DESCRIPTION: In this assignment, you will explore the
-## text classification problem of identifying complex words.
-## We have provided the following skeleton for your code,
-## with several helper functions, and all the required
-## functions you need to write.
+# ASSIGNMENT 1
+# Theresa McNeil
+# U09757615
+# RELEASED: 2/6/2019
+# DUE: 2/15/2019
+# DESCRIPTION: In this assignment, you will explore the
+# text classification problem of identifying complex words.
 #############################################################
 
 from collections import defaultdict
 import gzip
+import numpy as np
+from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LogisticRegression
 
 #### 1. Evaluation Metrics ####
 
-## Input: y_pred, a list of length n with the predicted labels,
-## y_true, a list of length n with the true labels
-## complex words are positive (1) and simple words are negative (0)
+# Input: y_pred, a list of length n with the predicted labels,
+# y_true, a list of length n with the true labels
+# complex words are positive (1) and simple words are negative (0)
 
-## Calculate true positives, false positives, true negatives and false negatives
+# Calculate true positives, false positives, true negatives and false negatives
 def get_metrics(y_pred, y_true):
     n = len(y_pred)
     tp = 0
@@ -38,26 +40,32 @@ def get_metrics(y_pred, y_true):
     recall = tp / (tp + fn)
     return precision, recall
 
-
-## Calculates the precision of the predicted labels
+# Calculates the precision of the predicted labels
 def get_precision(y_pred, y_true):
     precision, recall = get_metrics(y_pred, y_true)
     return precision
-    
-## Calculates the recall of the predicted labels
+
+# Calculates the recall of the predicted labels
 def get_recall(y_pred, y_true):
     precision, recall = get_metrics(y_pred, y_true)
     return recall
 
-## Calculates the f-score of the predicted labels
+# Calculates the f-score of the predicted labels
 def get_fscore(y_pred, y_true):
     precision, recall = get_metrics(y_pred, y_true)
     fscore = 2*(precision*recall)/(precision+recall)
     return fscore
 
+# returns the calculated recall, precision and recall
+def evaluate(y_pred, y_true):
+    precision, recall = get_metrics(y_pred, y_true)
+    fscore = get_fscore(y_pred, y_true)
+    return precision, recall, fscore
+
+
 #### 2. Complex Word Identification ####
 
-## Loads in the words and labels of one of the datasets
+# Loads in the words and labels of one of the datasets
 def load_file(data_file):
     words = []
     labels = []   
@@ -71,28 +79,25 @@ def load_file(data_file):
             i += 1
     return words, labels
 
-### 2.1: A very simple baseline
 
-## Makes feature matrix for all complex
+# 2.1: A very simple baseline
+# Makes feature matrix for all complex
 def all_complex_feature(words):
     n = len(words)
     pred = [1]*n
     return pred
 
-## Labels every word complex
+# Labels every word complex
 def all_complex(data_file):
     words, labels = load_file(data_file)
     pred = all_complex_feature(words)
-    precision = get_precision(pred, labels)
-    recall = get_recall(pred, labels)
-    fscore = get_fscore(pred, labels)
+    precision, recall, fscore = evaluate(pred, labels)
     performance = [precision, recall, fscore]
     return performance
 
 
-### 2.2: Word length thresholding
-
-## Makes feature matrix for word_length_threshold
+# 2.2: Word length thresholding
+# Makes feature matrix for word_length_threshold
 def length_threshold_feature(words, threshold):
     n = len(words)
     pred = [None]*n
@@ -104,34 +109,30 @@ def length_threshold_feature(words, threshold):
     return pred
 
 
-## Finds the best length threshold by f-score, and uses this threshold to
-## classify the training and development set
+# Finds the best length threshold by f-score, and uses this threshold to
+# classify the training and development set
 def word_length_threshold(training_file, development_file):
-    THRESHHOLD = 7
+    THRESHHOLD = 8
 
     twords, tlabels = load_file(training_file)
     dwords, dlabels = load_file(development_file)
     tpred = length_threshold_feature(twords, THRESHHOLD)
     dpred = length_threshold_feature(dwords, THRESHHOLD)
 
-    tprecision = get_precision(tpred, tlabels)
-    trecall = get_recall(tpred, tlabels)
-    tfscore = get_fscore(tpred, tlabels)
-
-    dprecision = get_precision(dpred, dlabels)
-    drecall = get_recall(dpred, dlabels)
-    dfscore = get_fscore(dpred, dlabels)
+    tprecision, trecall, tfscore = evaluate(tpred, tlabels)
+    dprecision, drecall, dfscore = evaluate(dpred, dlabels)
 
     training_performance = [tprecision, trecall, tfscore]
     development_performance = [dprecision, drecall, dfscore]
     return training_performance, development_performance
 
-### 2.3: Word frequency thresholding
 
-## Loads Google NGram counts
+# 2.3: Word frequency thresholding
+
+# Loads Google NGram counts
 def load_ngram_counts(ngram_counts_file):
     counts = defaultdict(int)
-    with gzip.open(ngram_counts_file, 'rt') as f:
+    with gzip.open(ngram_counts_file, 'rt', encoding='iso8859') as f:
         for line in f:
             token, count = line.strip().split('\t')
             if token[0].islower():
@@ -139,15 +140,16 @@ def load_ngram_counts(ngram_counts_file):
     return counts
 
 # Finds the best frequency threshold by f-score, and uses this threshold to
-## classify the training and development set
+# classify the training and development set
 
-## Make feature matrix for word_frequency_threshold
+
+# Make feature matrix for word_frequency_threshold
 def frequency_threshold_feature(words, threshold, counts):
     n = len(words)
     pred = [None]*n
     for i in range(n):
         word = words[i]
-        if counts[word] >= threshold:
+        if counts[word] <= threshold:
             pred[i] = 1
         else:
             pred[i] = 0
@@ -155,48 +157,124 @@ def frequency_threshold_feature(words, threshold, counts):
 
 
 def word_frequency_threshold(training_file, development_file, counts):
-    THRESHHOLD = 7
-
+    THRESHHOLD = 11000000
     twords, tlabels = load_file(training_file)
     dwords, dlabels = load_file(development_file)
-    tpred = frequency_threshold_feature(twords, THRESHHOLD)
-    dpred = frequency_threshold_feature(dwords, THRESHHOLD)
+    tpred = frequency_threshold_feature(twords, THRESHHOLD, counts)
+    dpred = frequency_threshold_feature(dwords, THRESHHOLD, counts)
 
-    tprecision = get_precision(tpred, tlabels)
-    trecall = get_recall(tpred, tlabels)
-    tfscore = get_fscore(tpred, tlabels)
-
-    dprecision = get_precision(dpred, dlabels)
-    drecall = get_recall(dpred, dlabels)
-    dfscore = get_fscore(dpred, dlabels)
+    tprecision, trecall, tfscore = evaluate(tpred, tlabels)
+    dprecision, drecall, dfscore = evaluate(dpred, dlabels)
 
     training_performance = [tprecision, trecall, tfscore]
     development_performance = [dprecision, drecall, dfscore]
     return training_performance, development_performance
 
-### 2.4: Naive Bayes
-        
-## Trains a Naive Bayes classifier using length and frequency features
+
+def get_features(words, counts):
+    features = []
+    for word in words:
+        freq = counts[word]
+        length = len(word)
+        features.append([freq, length])
+    return np.array(features)
+
+
+def scale_features(features):
+    mean = np.mean(features, axis=0)
+    sd = np.std(features, axis=0)
+    scaled = []
+    for f in features:
+        scaled_freq = (f[0] - mean[0]) / sd[0]
+        scaled_len = (f[1] - mean[1]) / sd[1]
+        scaled.append([scaled_freq, scaled_len])
+    return scaled
+
+
+# 2.4: Naive Bayes
+# Trains a Naive Bayes classifier using length and frequency features
 def naive_bayes(training_file, development_file, counts):
-    ## YOUR CODE HERE
-    training_performance = (tprecision, trecall, tfscore)
-    development_performance = (dprecision, drecall, dfscore)
-    return development_performance
+    # load in training and dev files, get features & standardize
+    twords, Y_t = load_file(training_file)
+    X_train = get_features(twords, counts)
+    dwords, Y_d = load_file(development_file)
+    X_dev = get_features(dwords, counts)
+    X_tscaled = scale_features(X_train)
+    X_dscaled = scale_features(X_dev)
+    # build model trained on training data
+    clf = GaussianNB()
+    clf.fit(X_tscaled, Y_t)
+    # predict labels for training and development & get metrics
+    Y_tpred = clf.predict(X_tscaled).tolist()
+    tprecision, trecall, tfscore = evaluate(Y_tpred, Y_t)
+    Y_dpred = clf.predict(X_dscaled).tolist()
+    dprecision, drecall, dfscore = evaluate(Y_dpred, Y_d)
 
-### 2.5: Logistic Regression
+    training_performance = [tprecision, trecall, tfscore]
+    development_performance = [dprecision, drecall, dfscore]
+    return training_performance, development_performance
 
-## Trains a Naive Bayes classifier using length and frequency features
+
+# 2.5: Logistic Regression
+# Trains a Logistic Regression classifier using length and frequency features
 def logistic_regression(training_file, development_file, counts):
-    ## YOUR CODE HERE    
-    training_performance = (tprecision, trecall, tfscore)
-    development_performance = (dprecision, drecall, dfscore)
-    return development_performance
+    # load in training and dev files, get features & standardize
+    twords, Y_t = load_file(training_file)
+    X_train = get_features(twords, counts)
+    dwords, Y_d = load_file(development_file)
+    X_dev = get_features(dwords, counts)
+    X_tscaled = scale_features(X_train)
+    X_dscaled = scale_features(X_dev)
+    # build model
+    clf = LogisticRegression()
+    clf.fit(X_tscaled, Y_t)
+    # predict labels for training and development sets & get metrics
+    Y_tpred = clf.predict(X_tscaled).tolist()
+    tprecision, trecall, tfscore = evaluate(Y_tpred, Y_t)
+    Y_dpred = clf.predict(X_dscaled).tolist()
+    dprecision, drecall, dfscore = evaluate(Y_dpred, Y_d)
 
-### 2.7: Build your own classifier
+    training_performance = [tprecision, trecall, tfscore]
+    development_performance = [dprecision, drecall, dfscore]
+    return training_performance, development_performance
 
-## Trains a classifier of your choosing, predicts labels for the test dataset
-## and writes the predicted labels to the text file 'test_labels.txt',
-## with ONE LABEL PER LINE
+# 2.7: Build your own classifier
+
+# Trains a classifier of your choosing, predicts labels for the test dataset
+# and writes the predicted labels to the text file 'test_labels.txt',
+# with ONE LABEL PER LINE
+
+
+def main():
+    print("all results in form [precision, recall, F1]")
+    print("results for training file on all complex baseline:")
+    print(all_complex(training_file))
+    print("results for development file on all complex baseline:")
+    print(all_complex(development_file))
+
+    train_result, dev_result = word_length_threshold(training_file, development_file)
+    print("results for training file on word length baseline with threshhold 8")
+    print(train_result)
+    print("results for development file on word length baseline with threshhold 8")
+    print(dev_result)
+
+    train_result, dev_result = word_frequency_threshold(training_file, development_file, counts)
+    print("results for training file on frequency baseline with threshhold 11mil")
+    print(train_result)
+    print("results for development file on frequency baseline with threshhold 11mil")
+    print(dev_result)
+
+    train_result, dev_result = naive_bayes(training_file, development_file, counts)
+    print("results for training file on naive bayes, trained with train file")
+    print(train_result)
+    print("result for development file on naive bayes, trained with train file")
+    print(dev_result)
+
+    train_result, dev_result = logistic_regression(training_file, development_file, counts)
+    print("results for training file on logistic regression, trained with train file")
+    print(train_result)
+    print("results for development file on logistic regression, trained with train file")
+    print(dev_result)
 
 
 if __name__ == "__main__":
@@ -205,6 +283,8 @@ if __name__ == "__main__":
     test_file = "data/complex_words_test_unlabeled.txt"
 
     train_data = load_file(training_file)
-    
+
     ngram_counts_file = "ngram_counts.txt.gz"
     counts = load_ngram_counts(ngram_counts_file)
+
+    main()
