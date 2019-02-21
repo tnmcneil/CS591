@@ -172,25 +172,16 @@ def word_frequency_threshold(training_file, development_file, counts):
     return training_performance, development_performance
 
 
-def get_features(words, counts):
-    features = []
-    for word in words:
-        freq = counts[word]
-        length = len(word)
-        features.append([freq, length])
-    return np.array(features)
-
-
 # 2.4: Naive Bayes
 # Trains a Naive Bayes classifier using length and frequency features
 def naive_bayes(training_file, development_file, counts):
     # load in training and dev files, get features & standardize
     twords, Y_t = load_file(training_file)
-    X_train = get_features(twords, counts)
+    X_train = np.array([[counts[word], len(word)] for word in twords])
     dwords, Y_d = load_file(development_file)
-    X_dev = get_features(dwords, counts)
+    X_dev = np.array([[counts[word], len(word)] for word in dwords])
     X_train = (X_train - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
-    X_dev = (X_dev - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
+    # X_dev = (X_dev - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
     # build model trained on training data
     clf = GaussianNB()
     clf.fit(X_train, Y_t)
@@ -210,11 +201,11 @@ def naive_bayes(training_file, development_file, counts):
 def logistic_regression(training_file, development_file, counts):
     # load in training and dev files, get features & standardize
     twords, Y_t = load_file(training_file)
-    X_train = get_features(twords, counts)
+    X_train = np.array([[counts[word], len(word)] for word in twords])
     dwords, Y_d = load_file(development_file)
-    X_dev = get_features(dwords, counts)
+    X_dev = np.array([[counts[word], len(word)] for word in dwords])
     X_train = (X_train - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
-    X_dev = (X_dev - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
+    # X_dev = (X_dev - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
     # build model
     clf = LogisticRegression()
     clf.fit(X_train, Y_t)
@@ -232,9 +223,9 @@ def logistic_regression(training_file, development_file, counts):
 
 def random_forrest(training_file ,development_file, counts):
     twords, Y_t = load_file(training_file)
-    X_train = get_features(twords, counts)
+    X_train = np.array([[counts[word], len(word)] for word in twords])
     dwords, Y_d = load_file(development_file)
-    X_dev = get_features(dwords, counts)
+    X_dev = np.array([[counts[word], len(word)] for word in dwords])
     X_train = (X_train - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
     X_dev = (X_dev - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
     clf = RandomForestClassifier()
