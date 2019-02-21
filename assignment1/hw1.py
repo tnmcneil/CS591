@@ -13,6 +13,7 @@ import gzip
 import numpy as np
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 
 #### 1. Evaluation Metrics ####
 
@@ -180,17 +181,6 @@ def get_features(words, counts):
     return np.array(features)
 
 
-def scale_features(features):
-    mean = np.mean(features, axis=0)
-    sd = np.std(features, axis=0)
-    scaled = []
-    for f in features:
-        scaled_freq = (f[0] - mean[0]) / sd[0]
-        scaled_len = (f[1] - mean[1]) / sd[1]
-        scaled.append([scaled_freq, scaled_len])
-    return scaled
-
-
 # 2.4: Naive Bayes
 # Trains a Naive Bayes classifier using length and frequency features
 def naive_bayes(training_file, development_file, counts):
@@ -199,15 +189,15 @@ def naive_bayes(training_file, development_file, counts):
     X_train = get_features(twords, counts)
     dwords, Y_d = load_file(development_file)
     X_dev = get_features(dwords, counts)
-    X_tscaled = scale_features(X_train)
-    X_dscaled = scale_features(X_dev)
+    X_train = (X_train - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
+    X_dev = (X_dev - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
     # build model trained on training data
     clf = GaussianNB()
-    clf.fit(X_tscaled, Y_t)
+    clf.fit(X_train, Y_t)
     # predict labels for training and development & get metrics
-    Y_tpred = clf.predict(X_tscaled).tolist()
+    Y_tpred = clf.predict(X_train).tolist()
     tprecision, trecall, tfscore = evaluate(Y_tpred, Y_t)
-    Y_dpred = clf.predict(X_dscaled).tolist()
+    Y_dpred = clf.predict(X_dev).tolist()
     dprecision, drecall, dfscore = evaluate(Y_dpred, Y_d)
 
     training_performance = [tprecision, trecall, tfscore]
@@ -223,15 +213,15 @@ def logistic_regression(training_file, development_file, counts):
     X_train = get_features(twords, counts)
     dwords, Y_d = load_file(development_file)
     X_dev = get_features(dwords, counts)
-    X_tscaled = scale_features(X_train)
-    X_dscaled = scale_features(X_dev)
+    X_train = (X_train - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
+    X_dev = (X_dev - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
     # build model
     clf = LogisticRegression()
-    clf.fit(X_tscaled, Y_t)
+    clf.fit(X_train, Y_t)
     # predict labels for training and development sets & get metrics
-    Y_tpred = clf.predict(X_tscaled).tolist()
+    Y_tpred = clf.predict(X_train).tolist()
     tprecision, trecall, tfscore = evaluate(Y_tpred, Y_t)
-    Y_dpred = clf.predict(X_dscaled).tolist()
+    Y_dpred = clf.predict(X_dev).tolist()
     dprecision, drecall, dfscore = evaluate(Y_dpred, Y_d)
 
     training_performance = [tprecision, trecall, tfscore]
@@ -239,6 +229,24 @@ def logistic_regression(training_file, development_file, counts):
     return training_performance, development_performance
 
 # 2.7: Build your own classifier
+
+def random_forrest(training_file ,development_file, counts):
+    twords, Y_t = load_file(training_file)
+    X_train = get_features(twords, counts)
+    dwords, Y_d = load_file(development_file)
+    X_dev = get_features(dwords, counts)
+    X_train = (X_train - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
+    X_dev = (X_dev - np.mean(X_train, axis=0)) / np.std(X_train, axis=0)
+    clf = RandomForestClassifier()
+    clf.fit(X_train, Y_t)
+    Y_tpred = clf.predict(X_train).tolist()
+    tprecision, trecall, tfscore = evaluate(Y_tpred, Y_t)
+    Y_dpred = clf.predict(X_dev).tolist()
+    dprecision, drecall, dfscore = evaluate(Y_dpred, Y_d)
+
+    training_performance = [tprecision, trecall, tfscore]
+    development_performance = [dprecision, drecall, dfscore]
+    return training_performance, development_performance
 
 # Trains a classifier of your choosing, predicts labels for the test dataset
 # and writes the predicted labels to the text file 'test_labels.txt',
@@ -274,6 +282,12 @@ def main():
     print("results for training file on logistic regression, trained with train file")
     print(train_result)
     print("results for development file on logistic regression, trained with train file")
+    print(dev_result)
+
+    train_result, dev_result = random_forrest(training_file, development_file, counts)
+    print("results for training file on random forrest, trained with train file")
+    print(train_result)
+    print("results for development file on random forrest, trained with train file")
     print(dev_result)
 
 
