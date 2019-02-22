@@ -184,18 +184,10 @@ def naive_bayes(training_file, development_file, counts):
     X_dev = np.array([[counts[word], len(word)] for word in dwords], dtype='float32')
     Y_t = np.array(Y_t)
     # standardize
-    freq_mean = np.mean(X_train, axis=0)[0]
-    len_mean = np.mean(X_train, axis=0)[1]
-    freq_sd = np.std(X_train, axis=0)[0]
-    len_sd = np.std(X_train, axis=0)[1]
-
-    for x in X_train:
-        x[0] = (x[0] - freq_mean) / freq_sd
-        x[1] = (x[1] - len_mean) / len_sd
-    for x in X_dev:
-        x[0] = (x[0] - freq_mean)/freq_sd
-        x[1] = (x[1] - len_mean)/len_sd
-
+    mean = np.mean(X_train, axis=0)
+    sd = np.std(X_train, axis=0)
+    X_train = (X_train - mean) / sd
+    X_dev = (X_dev - mean) / sd
     # build model trained on training data
     clf = GaussianNB()
     clf.fit(X_train, Y_t)
@@ -219,17 +211,10 @@ def logistic_regression(training_file, development_file, counts):
     X_dev = np.array([[counts[word], len(word)] for word in dwords], dtype='float32')
     Y_t = np.array(Y_t)
     # standardize
-    freq_mean = np.mean(X_train, axis=0)[0]
-    len_mean = np.mean(X_train, axis=0)[1]
-    freq_sd = np.std(X_train, axis=0)[0]
-    len_sd = np.std(X_train, axis=0)[1]
-
-    for x in X_train:
-        x[0] = (x[0] - freq_mean)/freq_sd
-        x[1] = (x[1] - len_mean)/len_sd
-    for x in X_dev:
-        x[0] = (x[0] - freq_mean)/freq_sd
-        x[1] = (x[1] - len_mean)/len_sd
+    mean = np.mean(X_train, axis=0)
+    sd = np.std(X_train, axis=0)
+    X_train = (X_train - mean) / sd
+    X_dev = (X_dev - mean) / sd
 
     # build model
     clf = LogisticRegression()
@@ -282,23 +267,15 @@ def random_forrest(training_file ,development_file, counts):
     dwords, Y_d = load_file(development_file)
     davg_word, dsentence_len, dword_freq = get_sentence_features(development_file)
     X_dev = []
-    for i in range(len(twords)):
+    for i in range(len(dwords)):
         word = dwords[i]
         X_dev.append([counts[word], len(word), count_syllables(word), davg_word[i], dsentence_len[i], dword_freq[i]])
     # X_dev = np.array([[counts[word], len(word), count_syllables(word)] for word in dwords], dtype='float32')
     # standardize
-    freq_mean = np.mean(X_train, axis=0)[0]
-    len_mean = np.mean(X_train, axis=0)[1]
-    freq_sd = np.std(X_train, axis=0)[0]
-    len_sd = np.std(X_train, axis=0)[1]
-
-    for x in X_train:
-        x[0] = (x[0] - freq_mean) / freq_sd
-        x[1] = (x[1] - len_mean) / len_sd
-    for x in X_dev:
-        x[0] = (x[0] - freq_mean) / freq_sd
-        x[1] = (x[1] - len_mean) / len_sd
-
+    mean = np.mean(X_train, axis=0)
+    sd = np.std(X_train, axis=0)
+    X_train = (X_train - mean) / sd
+    X_dev = (X_dev - mean) / sd
     clf = RandomForestClassifier()
     clf.fit(X_train, Y_t)
     Y_tpred = clf.predict(X_train).tolist()
@@ -347,11 +324,11 @@ def main():
     print("results for development file on logistic regression, trained with train file")
     print(dev_result)
 
-    # train_result, dev_result = random_forrest(training_file, development_file, counts)
-    # print("results for training file on random forrest, trained with train file")
-    # print(train_result)
-    # print("results for development file on random forrest, trained with train file")
-    # print(dev_result)
+    train_result, dev_result = random_forrest(training_file, development_file, counts)
+    print("results for training file on random forrest, trained with train file")
+    print(train_result)
+    print("results for development file on random forrest, trained with train file")
+    print(dev_result)
 
 
 if __name__ == "__main__":
