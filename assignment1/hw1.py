@@ -82,6 +82,17 @@ def load_file(data_file):
             i += 1
     return words, labels
 
+# loads in the words of the test dataset
+def load_test_file(data_file):
+    words = []
+    with open(data_file, 'rt', encoding="utf8") as f:
+        i = 0
+        for line in f:
+            if i > 0:
+                line_split = line[:-1].split("\t")
+                words.append(line_split[0].lower())
+            i += 1
+    return words
 
 # 2.1: A very simple baseline
 # Makes feature matrix for all complex
@@ -98,7 +109,6 @@ def all_complex(data_file):
     performance = [precision, recall, fscore]
     return performance
 
-
 # 2.2: Word length thresholding
 # Makes feature matrix for word_length_threshold
 def length_threshold_feature(words, threshold):
@@ -110,7 +120,6 @@ def length_threshold_feature(words, threshold):
         else:
             pred[i] = 0
     return pred
-
 
 # Finds the best length threshold by f-score, and uses this threshold to
 # classify the training and development set
@@ -129,7 +138,6 @@ def word_length_threshold(training_file, development_file):
     development_performance = [dprecision, drecall, dfscore]
     return training_performance, development_performance
 
-
 # 2.3: Word frequency thresholding
 
 # Loads Google NGram counts
@@ -145,7 +153,6 @@ def load_ngram_counts(ngram_counts_file):
 # Finds the best frequency threshold by f-score, and uses this threshold to
 # classify the training and development set
 
-
 # Make feature matrix for word_frequency_threshold
 def frequency_threshold_feature(words, threshold, counts):
     n = len(words)
@@ -157,7 +164,6 @@ def frequency_threshold_feature(words, threshold, counts):
         else:
             pred[i] = 0
     return pred
-
 
 def word_frequency_threshold(training_file, development_file, counts):
     THRESHHOLD = 11000000
@@ -172,7 +178,6 @@ def word_frequency_threshold(training_file, development_file, counts):
     training_performance = [tprecision, trecall, tfscore]
     development_performance = [dprecision, drecall, dfscore]
     return training_performance, development_performance
-
 
 # 2.4: Naive Bayes
 # Trains a Naive Bayes classifier using length and frequency features
@@ -199,7 +204,6 @@ def naive_bayes(training_file, development_file, counts):
     training_performance = [tprecision, trecall, tfscore]
     development_performance = [dprecision, drecall, dfscore]
     return training_performance, development_performance
-
 
 # 2.5: Logistic Regression
 # Trains a Logistic Regression classifier using length and frequency features
@@ -231,7 +235,9 @@ def logistic_regression(training_file, development_file, counts):
 
 # 2.7: Build your own classifier
 
-
+# helper function to extract features from sentence, namely:
+# average length of word in sentence, length of sentence, and
+# frequency that word occurs in sentence
 def get_sentence_features(data_file):
     sentences = []
     words = []
@@ -254,8 +260,8 @@ def get_sentence_features(data_file):
         word_freq.append(tokens.count(words[i]))
     return avg_word, sentence_len, word_freq
 
-
-def random_forrest(training_file ,development_file, counts):
+def random_forrest(training_file ,development_file, test_file, counts):
+    # load in features and labels for all words & create feature vectors
     twords, Y_t = load_file(training_file)
     tavg_word, tsentence_len, tword_freq = get_sentence_features(training_file)
     X_train = []
@@ -263,34 +269,46 @@ def random_forrest(training_file ,development_file, counts):
         word = twords[i]
         X_train.append([counts[word], len(word), count_syllables(word), tavg_word[i], tsentence_len[i], tword_freq[i]])
     X_train = np.array(X_train, dtype='float32')
-    # X_train = np.array([[counts[word], len(word), count_syllables(word)] for word in twords], dtype='float32')
     dwords, Y_d = load_file(development_file)
     davg_word, dsentence_len, dword_freq = get_sentence_features(development_file)
     X_dev = []
     for i in range(len(dwords)):
         word = dwords[i]
         X_dev.append([counts[word], len(word), count_syllables(word), davg_word[i], dsentence_len[i], dword_freq[i]])
-    # X_dev = np.array([[counts[word], len(word), count_syllables(word)] for word in dwords], dtype='float32')
-    # standardize
+    X_dev = np.array(X_dev, dtype='float32')
+    rwords = load_test_file(test_file)
+    ravg_word, rsentence_len, rword_freq = get_sentence_features(test_file)
+    X_test = []
+    for i in range(len(rwords)):
+        word = rwords[i]
+        X_test.append([counts[word], len(word), count_syllables(word), ravg_word[i], rsentence_len[i], rword_freq[i]])
+    X_test = np.array(X_test, dtype='float32')
+    # standardize data
     mean = np.mean(X_train, axis=0)
     sd = np.std(X_train, axis=0)
     X_train = (X_train - mean) / sd
     X_dev = (X_dev - mean) / sd
+    X_test = (X_test - mean) / sd
+    # build Random Forest Model trained on training file
     clf = RandomForestClassifier()
     clf.fit(X_train, Y_t)
+    # evaluate model using training and development files & return metrics
     Y_tpred = clf.predict(X_train).tolist()
     tprecision, trecall, tfscore = evaluate(Y_tpred, Y_t)
     Y_dpred = clf.predict(X_dev).tolist()
     dprecision, drecall, dfscore = evaluate(Y_dpred, Y_d)
-
     training_performance = [tprecision, trecall, tfscore]
     development_performance = [dprecision, drecall, dfscore]
+    # make predictions using model on test set and store in txt file for teacher evaluation
+    Y_testpred = clf.predict(X_test).tolist()
+    with open("test_labels.txt", "w") as f:
+        for label in Y_testpred:
+            f.write(str(label) + "\n")
     return training_performance, development_performance
 
 # Trains a classifier of your choosing, predicts labels for the test dataset
 # and writes the predicted labels to the text file 'test_labels.txt',
 # with ONE LABEL PER LINE
-
 
 def main():
 
@@ -324,7 +342,7 @@ def main():
     print("results for development file on logistic regression, trained with train file")
     print(dev_result)
 
-    train_result, dev_result = random_forrest(training_file, development_file, counts)
+    train_result, dev_result = random_forrest(training_file, development_file, test_file, counts)
     print("results for training file on random forrest, trained with train file")
     print(train_result)
     print("results for development file on random forrest, trained with train file")
