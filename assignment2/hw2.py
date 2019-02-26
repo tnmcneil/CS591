@@ -4,6 +4,7 @@ import subprocess
 import re
 import random
 import numpy as np
+import math
 
 
 def read_in_shakespeare():
@@ -65,11 +66,31 @@ def create_term_document_matrix(line_tuples, document_names, vocab):
       frequency with which word i occurs in document j.
     """
 
+    # dictionary with key = vocab word and value = index at which it appears in vocab list
     vocab_to_id = dict(zip(vocab, range(0, len(vocab))))
+    # dictionary with key = doc name and value = index at which it appears in doc name list
     docname_to_id = dict(zip(document_names, range(0, len(document_names))))
 
-    # YOUR CODE HERE
-    return None
+    m = len(vocab)
+    n = len(document_names)
+
+    td_matrix = np.zeros((m,n))
+
+    for i in range(len(line_tuples)):
+        doc = line_tuples[i][0]
+        line = line_tuples[i][1]
+        d_id = docname_to_id[doc]
+        for token in line:
+            t_id = vocab_to_id[token]
+            td_matrix[t_id][d_id] += 1
+
+    # print(td_matrix[(vocab_to_id['soldier'])][17])
+    # print(td_matrix[(vocab_to_id['soldier'])][28])
+    # print(td_matrix[(vocab_to_id['soldier'])][18])
+    # print(td_matrix[(vocab_to_id['soldier'])][26])
+
+    return td_matrix
+
 
 def create_term_context_matrix(line_tuples, vocab, context_window_size=1):
     """
@@ -140,9 +161,11 @@ def compute_cosine_similarity(vector1, vector2):
     Returns:
       A scalar similarity value.
     """
-
-    # YOUR CODE HERE
-    return -1
+    dp = np.dot(vector1, vector2)
+    mag1 = math.sqrt(sum(i**2 for i in vector1))
+    mag2 = math.sqrt(sum(i**2 for i in vector2))
+    similarity = dp/(mag1*mag2)
+    return similarity
 
 def compute_jaccard_similarity(vector1, vector2):
     """
@@ -156,8 +179,11 @@ def compute_jaccard_similarity(vector1, vector2):
       A scalar similarity value.
     """
 
-    # YOUR CODE HERE
-    return -1
+    intersect = set(vector1.flatten()).intersection(set(vector2.flatten()))
+    union = set(vector1.flatten()).union(set(vector2.flatten()))
+    similarity = len(intersect)/len(union)
+    # ALSO CHECK: len(intersection) / (len(a) + len(b) - len(intersection))
+    return similarity
 
 def compute_dice_similarity(vector1, vector2):
     """
@@ -170,9 +196,12 @@ def compute_dice_similarity(vector1, vector2):
     Returns:
       A scalar similarity value.
     """
-
-    # YOUR CODE HERE
-    return -1
+    # IMPLEMENTED SET VERSION
+    # CHECK TP/FN VERSION: 2TP/(2TP + FP + FN)
+    # ALSO CHECK 2|A DOT B| / |A|^2 + |B|^2  (NEED BINARY VECTORS)
+    intersect = set(vector1.flatten()).intersection(set(vector2.flatten()))
+    similarity = 2*len(intersect)/(len(vector1) + len(vector2))
+    return similarity
 
 def rank_plays(target_play_index, term_document_matrix, similarity_fn):
     """
@@ -189,9 +218,17 @@ def rank_plays(target_play_index, term_document_matrix, similarity_fn):
       A length-n list of integer indices corresponding to play names,
       ordered by decreasing similarity to the play indexed by target_play_index
     """
+    # HAVEN'T TESTED
+    similarities = dict()
 
-    # YOUR CODE HERE
-    return []
+    target_play_vector = term_document_matrix[:,target_play_index]
+
+    for i in range(term_document_matrix.shape[1]):
+        comparison_play_vector = term_document_matrix[:,i]
+        similarity = similarity_fn(target_play_vector, comparison_play_vector)
+        similarities[i] = similarity
+
+    return sorted(similarities, key=similarities.get)
 
 def rank_words(target_word_index, matrix, similarity_fn):
     """
@@ -208,9 +245,17 @@ def rank_words(target_word_index, matrix, similarity_fn):
       A length-n list of integer word indices, ordered by decreasing similarity to the
       target word indexed by word_index
     """
+    # HAVEN'T TESTED
+    similarities = dict()
 
-    # YOUR CODE HERE
-    return []
+    target_word_vector = matrix[target_word_index]
+
+    for i in range(matrix.shape[0]):
+        comparison_word_vector = matrix[i]
+        similarity = similarity_fn(target_word_vector, comparison_word_vector)
+        similarities[i] = similarity
+
+    return sorted(similarities, key=similarities.get)
 
 
 if __name__ == '__main__':
