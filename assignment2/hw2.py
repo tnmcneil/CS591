@@ -100,6 +100,7 @@ def create_term_context_matrix(line_tuples, vocab, context_window_size=1):
       line_tuples: A list of tuples, containing the name of the document and
       a tokenized line from that document.
       vocab: A list of the tokens in the vocabulary
+      context_window_size: size of the word window around the target word
 
     Let n = len(vocab).
 
@@ -110,9 +111,22 @@ def create_term_context_matrix(line_tuples, vocab, context_window_size=1):
     """
 
     vocab_to_id = dict(zip(vocab, range(0, len(vocab))))
+    m = len(vocab)
+    tc_matrix = np.zeros((m,m))
 
-    # YOUR CODE HERE
-    return None
+    for i in range(len(line_tuples)):
+        line = line_tuples[i][1]
+        for j in range(len(line)):
+            t_id = vocab_to_id[line[j]]
+            lb = max(0, j-context_window_size)
+            ub = min(len(line)-1, j+context_window_size)
+            context = line[lb:ub+1]
+            for k in range(len(context)):
+                c_id = vocab_to_id[context[k]]
+                tc_matrix[t_id][c_id] += 1
+    print(tc_matrix)
+
+    return tc_matrix
 
 def create_PPMI_matrix(term_context_matrix):
     """
@@ -218,7 +232,6 @@ def rank_plays(target_play_index, term_document_matrix, similarity_fn):
       A length-n list of integer indices corresponding to play names,
       ordered by decreasing similarity to the play indexed by target_play_index
     """
-    # HAVEN'T TESTED
     similarities = dict()
 
     target_play_vector = term_document_matrix[:,target_play_index]
@@ -245,7 +258,6 @@ def rank_words(target_word_index, matrix, similarity_fn):
       A length-n list of integer word indices, ordered by decreasing similarity to the
       target word indexed by word_index
     """
-    # HAVEN'T TESTED
     similarities = dict()
 
     target_word_vector = matrix[target_word_index]
@@ -264,38 +276,42 @@ if __name__ == '__main__':
     print('Computing term document matrix...')
     td_matrix = create_term_document_matrix(tuples, document_names, vocab)
 
-    print('Computing tf-idf matrix...')
-    tf_idf_matrix = create_tf_idf_matrix(td_matrix)
+    # print('Computing tf-idf matrix...')
+    # tf_idf_matrix = create_tf_idf_matrix(td_matrix)
 
     print('Computing term context matrix...')
     tc_matrix = create_term_context_matrix(tuples, vocab, context_window_size=2)
 
-    print('Computing PPMI matrix...')
-    PPMI_matrix = create_PPMI_matrix(tc_matrix)
+    # print('Computing PPMI matrix...')
+    # PPMI_matrix = create_PPMI_matrix(tc_matrix)
 
     random_idx = random.randint(0, len(document_names)-1)
     similarity_fns = [compute_cosine_similarity, compute_jaccard_similarity, compute_dice_similarity]
-    for sim_fn in similarity_fns:
-        print('\nThe top most similar plays to "%s" using %s are:' % (document_names[random_idx], sim_fn.__qualname__))
-        ranks = rank_plays(random_idx, td_matrix, sim_fn)
-        for idx in range(0, 1):
-            doc_id = ranks[idx]
-            print('%d: %s' % (idx+1, document_names[doc_id]))
 
-    word = 'juliet'
-    vocab_to_index = dict(zip(vocab, range(0, len(vocab))))
-    for sim_fn in similarity_fns:
-        print('\nThe 10 most similar words to "%s" using %s on term-document frequency matrix are:' % (word, sim_fn.__qualname__))
-        ranks = rank_words(vocab_to_index[word], td_matrix, sim_fn)
-        for idx in range(0, 10):
-            word_id = ranks[idx]
-            print('%d: %s' % (idx+1, vocab[word_id]))
+    # for sim_fn in similarity_fns:
+    #     print('\nThe top most similar plays to "%s" using %s are:' % (document_names[random_idx], sim_fn.__qualname__))
+    #     ranks = rank_plays(random_idx, td_matrix, sim_fn)
+    #     for idx in range(0, 1):
+    #         doc_id = ranks[idx]
+    #         print('%d: %s' % (idx+1, document_names[doc_id]))
+
+    # word = 'juliet'
+    # vocab_to_index = dict(zip(vocab, range(0, len(vocab))))
+    # for sim_fn in similarity_fns:
+    #     print('\nThe 10 most similar words to "%s" using %s on term-document frequency matrix are:' % (word, sim_fn.__qualname__))
+    #     ranks = rank_words(vocab_to_index[word], td_matrix, sim_fn)
+    #     for idx in range(0, 10):
+    #         word_id = ranks[idx]
+    #         print('%d: %s' % (idx+1, vocab[word_id]))
 
     word = 'juliet'
     vocab_to_index = dict(zip(vocab, range(0, len(vocab))))
     for sim_fn in similarity_fns:
         print('\nThe 10 most similar words to "%s" using %s on term-context frequency matrix are:' % (word, sim_fn.__qualname__))
+        print("pre calc")
         ranks = rank_words(vocab_to_index[word], tc_matrix, sim_fn)
+        print("ranks")
+        print(ranks)
         for idx in range(0, 10):
             word_id = ranks[idx]
             print('%d: %s' % (idx+1, vocab[word_id]))
