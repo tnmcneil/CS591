@@ -116,8 +116,8 @@ def create_term_context_matrix(line_tuples, vocab, context_window_size=1):
     """
 
     vocab_to_id = dict(zip(vocab, range(0, len(vocab))))
-    m = len(vocab)
-    tc_matrix = np.zeros((m,m))
+    n = len(vocab)
+    tc_matrix = np.zeros((n,n))
 
     for i in range(0,len(line_tuples)):
         line = line_tuples[i][1]
@@ -172,26 +172,35 @@ def create_PPMI_matrix(term_context_matrix):
     # words = 0
     # for i in range(n):
     #     words += term_context_matrix[i][i]
-    # frequency_matrix = np.divide(term_context_matrix, words)
+    words = np.trace(term_context_matrix)
+    frequency_matrix = np.divide(term_context_matrix, words)
 
-    ppmi_matrix = np.zeros((n,n))
+    # ppmi_matrix = np.zeros((n,n))
+
+    diag = frequency_matrix.diagonal()
+    div = np.matmul(diag, np.transpose(diag))
+
+    prelog = np.divide(frequency_matrix, div)
+    with np.errstate(divide='ignore'):
+        ppmi_matrix = np.log(prelog)
+    ppmi_matrix[np.isneginf(ppmi_matrix)]=0
 
     # print(term_context_matrix)
 
-    for i in range(n):
-        for j in range(n):
-            # print('ij')
-            # print(term_context_matrix[i][j])
-            # print('ii')
-            # print(term_context_matrix[i][i])
-            # print('jj')
-            # print(term_context_matrix[j][j])
-            if term_context_matrix[i][j] == 0:
-                val = 0
-            else:
-                val = math.log(term_context_matrix[i][j] / (term_context_matrix[i][i]*term_context_matrix[j][j]))
-            ppmi_matrix[i][j] = val
-            # ppmi_matrix[i][j] = math.log((term_context_matrix[i][j]/(term_context_matrix[i][i]*term_context_matrix[j][j])))
+    # for i in range(n):
+    #     for j in range(n):
+    #         # print('ij')
+    #         # print(term_context_matrix[i][j])
+    #         # print('ii')
+    #         # print(term_context_matrix[i][i])
+    #         # print('jj')
+    #         # print(term_context_matrix[j][j])
+    #         if term_context_matrix[i][j] == 0:
+    #             val = 0
+    #         else:
+    #
+    #             val = math.log(frequency_matrix[i][j] / (frequency_matrix[i][i]*frequency_matrix[j][j]))
+    #         ppmi_matrix[i][j] = val
 
     # print(ppmi_matrix)
     return ppmi_matrix
@@ -210,8 +219,8 @@ def create_tf_idf_matrix(term_document_matrix):
       A numpy array with the same dimension as term_document_matrix, where
       A_ij is weighted by the inverse document frequency of document h.
     """
+    
 
-    # YOUR CODE HERE
     return None
 
 def compute_cosine_similarity(vector1, vector2):
@@ -373,7 +382,7 @@ if __name__ == '__main__':
     vocab_to_index = dict(zip(vocab, range(0, len(vocab))))
     for sim_fn in similarity_fns:
         print('\nThe 10 most similar words to "%s" using %s on PPMI matrix are:' % (word, sim_fn.__qualname__))
-        ranks = rank_words(vocab_to_index[word], tf_idf_matrix, sim_fn)
+        ranks = rank_words(vocab_to_index[word], PPMI_matrix, sim_fn)
         for idx in range(0, 10):
             word_id = ranks[idx]
             print('%d: %s' % (idx+1, vocab[word_id]))
@@ -381,8 +390,8 @@ if __name__ == '__main__':
     word = 'juliet'
     vocab_to_index = dict(zip(vocab, range(0, len(vocab))))
     for sim_fn in similarity_fns:
-        print('\nThe 10 most similar words to "%s" using %s on PPMI matrix are:' % (word, sim_fn.__qualname__))
-        ranks = rank_words(vocab_to_index[word], PPMI_matrix, sim_fn)
+        print('\nThe 10 most similar words to "%s" using %s on tf idf matrix are:' % (word, sim_fn.__qualname__))
+        ranks = rank_words(vocab_to_index[word], tf_idf_matrix, sim_fn)
         for idx in range(0, 10):
             word_id = ranks[idx]
             print('%d: %s' % (idx+1, vocab[word_id]))
