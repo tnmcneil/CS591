@@ -219,9 +219,12 @@ def create_tf_idf_matrix(term_document_matrix):
       A numpy array with the same dimension as term_document_matrix, where
       A_ij is weighted by the inverse document frequency of document h.
     """
-    
-
-    return None
+    # n = # documents
+    n = term_document_matrix.shape[1]
+    idf = np.sum(term_document_matrix, axis=1)
+    idf = np.log(np.reciprocal(idf.astype(np.float64))*n)
+    tf_idf_matrix = np.multiply(term_document_matrix.T, idf).T
+    return tf_idf_matrix
 
 def compute_cosine_similarity(vector1, vector2):
     """
@@ -319,9 +322,9 @@ def rank_words(target_word_index, matrix, similarity_fn):
       target word indexed by word_index
     """
     similarities = dict()
-    print('matrix')
-    print(matrix)
-    print('target index is: ' + str(target_word_index))
+    # print('matrix')
+    # print(matrix)
+    # print('target index is: ' + str(target_word_index))
     target_word_vector = matrix[target_word_index,:]
 
     for i in range(matrix.shape[0]):
@@ -343,7 +346,7 @@ if __name__ == '__main__':
     print('Computing tf-idf matrix...')
     tf_idf_matrix = create_tf_idf_matrix(td_matrix)
 
-    print('Computing term context matrix...')
+    print("Computing term context matrix...")
     tc_matrix = create_term_context_matrix(tuples, vocab, context_window_size=2)
 
     print('Computing PPMI matrix...')
