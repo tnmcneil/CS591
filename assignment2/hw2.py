@@ -5,6 +5,7 @@ import re
 import random
 import numpy as np
 import math
+import matplotlib.pylab as plt
 
 def read_in_shakespeare():
     """
@@ -22,16 +23,25 @@ def read_in_shakespeare():
     """
 
     tuples = []
+    char_tuples = []
+    char_names = []
+    # char_names = dict()
 
     with open('will_play_text.csv') as f:
         csv_reader = csv.reader(f, delimiter=';')
         for row in csv_reader:
             play_name = row[1]
+            char_name = row[4].lower()
+            # if char_name in char_names:
+            #     char_names[char_name] += 1
+            # else:
+            #     char_names[char_name] = 1
             line = row[5]
             line_tokens = re.sub(r'[^a-zA-Z0-9\s]', ' ', line).split()
             line_tokens = [token.lower() for token in line_tokens]
 
             tuples.append((play_name, line_tokens))
+            char_tuples.append((char_name, line_tokens))
 
     with open('vocab.txt') as f:
         vocab = [line.strip() for line in f]
@@ -39,13 +49,11 @@ def read_in_shakespeare():
     with open('play_names.txt') as f:
         document_names = [line.strip() for line in f]
 
-    return tuples, document_names, vocab
-
-def get_row_vector(matrix, row_id):
-    return matrix[row_id, :]
-
-def get_column_vector(matrix, col_id):
-    return matrix[:, col_id]
+    with open('char_names.txt') as f:
+        for line in f:
+            char = line.split('\t')[0]
+            char_names.append(char)
+    return tuples, document_names, vocab, char_tuples, char_names
 
 def create_term_document_matrix(line_tuples, document_names, vocab):
     """
@@ -83,19 +91,7 @@ def create_term_document_matrix(line_tuples, document_names, vocab):
             t_id = vocab_to_id[token]
             td_matrix[t_id][d_id] += 1
 
-    # print(td_matrix[(vocab_to_id['soldier'])][17])
-    # print(td_matrix[(vocab_to_id['soldier'])][28])
-    # print(td_matrix[(vocab_to_id['soldier'])][18])
-    # print(td_matrix[(vocab_to_id['soldier'])][26])
-    # juliet = vocab_to_id['juliet']
-    # romeo = vocab_to_id['romeo']
-    # print("term doc")
-    # print(td_matrix[juliet])
-    # print(td_matrix[romeo])
-    # print(np.sum(td_matrix[vocab_to_id['love']]))
-
     return td_matrix
-
 
 def create_term_context_matrix(line_tuples, vocab, context_window_size=1):
     """
@@ -118,7 +114,6 @@ def create_term_context_matrix(line_tuples, vocab, context_window_size=1):
     vocab_to_id = dict(zip(vocab, range(0, len(vocab))))
     n = len(vocab)
     tc_matrix = np.zeros((n,n))
-
     for i in range(0,len(line_tuples)):
         line = line_tuples[i][1]
         for j in range(0,len(line)):
@@ -127,31 +122,24 @@ def create_term_context_matrix(line_tuples, vocab, context_window_size=1):
             ub = min(len(line), j+context_window_size)
             context = line[lb:ub+1]
             for k in range(0,len(context)):
-                # print("target word j:")
-                # print(line[j])
-                # print("context word i:")
-                # print(context[k])
                 c_id = vocab_to_id[context[k]]
                 tc_matrix[t_id][c_id] += 1
-                # print("co-occurrence of words " + str(t_id) + " and " + str(+ c_id))
-                # print(tc_matrix[t_id][c_id])
-    #
-    # juliet = vocab_to_id['juliet']
-    # romeo = vocab_to_id['romeo']
-    # love = vocab_to_id['love']
-    # print("Term context")
-    # print(tc_matrix[juliet][juliet])
-    # print(tc_matrix[romeo][romeo])
-    # print(tc_matrix[love][love])
-    # print(tc_matrix[juliet][love])
-    # print(max(tc_matrix[0][1:]))
-    # print(vocab_to_id)
-    # for a in range(len(tc_matrix)):
-    #     print(max(tc_matrix[a]))
-    #     print(tc_matrix[a][a])
-    #     print(tc_matrix[a].sort()[-2])
-
     return tc_matrix
+
+def create_term_char_matrix(char_tuples, vocab, char_names):
+    vocab_to_id = dict(zip(vocab, range(0, len(vocab))))
+    char_to_id = dict(zip(char_names, range(0, len(char_names))))
+    n = len(vocab)
+    m = len(char_names)
+    term_char_matrix = np.zeros((n,m))
+    for i in range(len(char_tuples)):
+        char = char_tuples[i][0].lower()
+        line = char_tuples[i][1]
+        c_id = char_to_id[char]
+        for token in line:
+            t_id = vocab_to_id[token]
+            term_char_matrix[t_id][c_id] += 1
+    return term_char_matrix
 
 def create_PPMI_matrix(term_context_matrix):
     """
@@ -168,14 +156,9 @@ def create_PPMI_matrix(term_context_matrix):
        and the jth word in the term_context_matrix.
     """
 
-    n = term_context_matrix.shape[0]
-    # words = 0
-    # for i in range(n):
-    #     words += term_context_matrix[i][i]
+    # total number words in all texts
     words = np.trace(term_context_matrix)
     frequency_matrix = np.divide(term_context_matrix, words)
-
-    # ppmi_matrix = np.zeros((n,n))
 
     diag = frequency_matrix.diagonal()
     div = np.matmul(diag, np.transpose(diag))
@@ -185,24 +168,7 @@ def create_PPMI_matrix(term_context_matrix):
         ppmi_matrix = np.log(prelog)
     ppmi_matrix[np.isneginf(ppmi_matrix)]=0
 
-    # print(term_context_matrix)
-
-    # for i in range(n):
-    #     for j in range(n):
-    #         # print('ij')
-    #         # print(term_context_matrix[i][j])
-    #         # print('ii')
-    #         # print(term_context_matrix[i][i])
-    #         # print('jj')
-    #         # print(term_context_matrix[j][j])
-    #         if term_context_matrix[i][j] == 0:
-    #             val = 0
-    #         else:
-    #
-    #             val = math.log(frequency_matrix[i][j] / (frequency_matrix[i][i]*frequency_matrix[j][j]))
-    #         ppmi_matrix[i][j] = val
-
-    # print(ppmi_matrix)
+    ppmi_matrix[ppmi_matrix < 0] = 0
     return ppmi_matrix
 
 def create_tf_idf_matrix(term_document_matrix):
@@ -220,8 +186,8 @@ def create_tf_idf_matrix(term_document_matrix):
       A_ij is weighted by the inverse document frequency of document h.
     """
     # n = # documents
-    n = term_document_matrix.shape[1]
-    idf = np.sum(term_document_matrix, axis=1)
+    n = float(term_document_matrix.shape[1])
+    idf = np.sum(term_document_matrix > 0, axis=1)
     idf = np.log(np.reciprocal(idf.astype(np.float64))*n)
     tf_idf_matrix = np.multiply(term_document_matrix.T, idf).T
     return tf_idf_matrix
@@ -238,8 +204,8 @@ def compute_cosine_similarity(vector1, vector2):
       A scalar similarity value.
     """
     dp = np.dot(vector1, vector2)
-    mag1 = np.sqrt(vector1.dot(vector1))
-    mag2 = np.sqrt(vector2.dot(vector2))
+    mag1 = np.linalg.norm(vector1)
+    mag2 = np.linalg.norm(vector2)
     similarity = dp/(mag1*mag2)
     return similarity
 
@@ -254,10 +220,7 @@ def compute_jaccard_similarity(vector1, vector2):
     Returns:
       A scalar similarity value.
     """
-    dp = np.dot(vector1, vector2)
-    c1 = vector1.dot(vector1)
-    c2 = vector2.dot(vector2)
-    similarity = dp / (c1 + c2 - dp)
+    similarity = np.sum(np.minimum(vector1,vector2)) / np.sum(np.maximum(vector1,vector2))
     return similarity
 
 def compute_dice_similarity(vector1, vector2):
@@ -271,10 +234,8 @@ def compute_dice_similarity(vector1, vector2):
     Returns:
       A scalar similarity value.
     """
-    dp = np.dot(vector1, vector2)
-    c1 = vector1.dot(vector1)
-    c2 = vector2.dot(vector2)
-    similarity = 2*dp / (c1 + c2)
+    # similarity = 2*(np.sum(np.minimum(vector1,vector2))) / (np.sum(vector1) + np.sum(vector2))
+    similarity = 2*np.sum(np.minimum(vector1, vector2)) / np.sum(vector1 + vector2)
     return similarity
 
 def rank_plays(target_play_index, term_document_matrix, similarity_fn):
@@ -301,9 +262,7 @@ def rank_plays(target_play_index, term_document_matrix, similarity_fn):
             comparison_play_vector = term_document_matrix[:,i]
             similarity = similarity_fn(target_play_vector, comparison_play_vector)
             similarities[i] = similarity
-
-    # print(similarities)
-    # print(sorted(similarities, key=similarities.get))
+    # return similarities
     return sorted(similarities, key=similarities.get, reverse=True)
 
 def rank_words(target_word_index, matrix, similarity_fn):
@@ -322,9 +281,6 @@ def rank_words(target_word_index, matrix, similarity_fn):
       target word indexed by word_index
     """
     similarities = dict()
-    # print('matrix')
-    # print(matrix)
-    # print('target index is: ' + str(target_word_index))
     target_word_vector = matrix[target_word_index,:]
 
     for i in range(matrix.shape[0]):
@@ -332,16 +288,45 @@ def rank_words(target_word_index, matrix, similarity_fn):
             comparison_word_vector = matrix[i,:]
             similarity = similarity_fn(target_word_vector, comparison_word_vector)
             similarities[i] = similarity
-
-    # print(similarities)
     return sorted(similarities, key=similarities.get, reverse=True)
 
+def rank_characters(target_char_index, matrix, similarity_fn):
+    similarities = dict()
+
+    target_play_vector = matrix[:, target_char_index]
+
+    for i in range(matrix.shape[1]):
+        if i != target_char_index:
+            comparison_char_vector = matrix[:, i]
+            similarity = similarity_fn(target_play_vector, comparison_char_vector)
+            similarities[i] = similarity
+    return similarities
+    # return sorted(similarities, key=similarities.get, reverse=True)
 
 if __name__ == '__main__':
-    tuples, document_names, vocab = read_in_shakespeare()
+    tuples, document_names, vocab, char_tuples, char_names = read_in_shakespeare()
+    # with open("char_names.txt", "w") as f:
+    #     for k, v in char_names.items():
+    #         f.write(k + "\t" + str(v) + "\n")
 
     print('Computing term document matrix...')
     td_matrix = create_term_document_matrix(tuples, document_names, vocab)
+    docname_to_id = dict(zip(document_names, range(0, len(document_names))))
+
+    # tragedies = []
+    # comedies = []
+    # histories = []
+    # with open("play_genre.txt") as f:
+    #     for line in f:
+    #         line = line.strip().split("\t")
+    #         play = line[0]
+    #         genre = line[1]
+    #         if genre == 'Tragedy':
+    #             tragedies.append(docname_to_id[play])
+    #         elif genre == 'Comedy':
+    #             comedies.append(docname_to_id[play])
+    #         elif genre == 'History':
+    #             histories.append(docname_to_id[play])
 
     print('Computing tf-idf matrix...')
     tf_idf_matrix = create_tf_idf_matrix(td_matrix)
@@ -351,10 +336,87 @@ if __name__ == '__main__':
 
     print('Computing PPMI matrix...')
     PPMI_matrix = create_PPMI_matrix(tc_matrix)
-    print(PPMI_matrix.dtype)
+
+    print('Computing term character matrix...')
+    term_character_matrix = create_term_char_matrix(char_tuples, vocab, char_names)
 
     random_idx = random.randint(0, len(document_names)-1)
     similarity_fns = [compute_cosine_similarity, compute_jaccard_similarity, compute_dice_similarity]
+
+    # tragedy_avg = [0,0,0]
+    # tragedy_comedy_avg = [0,0,0]
+    # tragedy_history_avg = [0,0,0]
+    # for tragedy in tragedies:
+    #     for i in range(len(similarity_fns)):
+    #         ranks = rank_plays(tragedy, td_matrix, similarity_fns[i])
+    #         sub_tragedy = [t for t in tragedies if t != tragedy]
+    #         tragedy_ranks = [ranks[rank] for rank in sub_tragedy]
+    #         tragedy_avg[i] += np.mean(tragedy_ranks)
+    #         tragedy_comedy_ranks = [ranks[rank] for rank in comedies]
+    #         tragedy_comedy_avg[i] += np.mean(tragedy_comedy_ranks)
+    #         tragedy_history_ranks = [ranks[rank] for rank in histories]
+    #         tragedy_history_avg[i] += np.mean(tragedy_history_ranks)
+    # tragedy_avg = [t/len(tragedies) for t in tragedy_avg]
+    # tragedy_comedy_avg = [c/len(tragedies) for c in tragedy_comedy_avg]
+    # tragedy_history_avg = [h/len(tragedies) for h in tragedy_history_avg]
+    # print("tragedy avg")
+    # print(tragedy_avg)
+    # print("tragedy comedy avg")
+    # print(tragedy_comedy_avg)
+    # print("tragedy history avg")
+    # print(tragedy_history_avg)
+    # print("tragedy average to all")
+    # print(np.mean(np.array([tragedy_avg, tragedy_comedy_avg, tragedy_history_avg]), axis=0))
+    #
+    # comedy_avg = [0,0,0]
+    # comedy_tragedy_avg = [0,0,0]
+    # comedy_history_avg = [0,0,0]
+    # for comedy in comedies:
+    #     for i in range(len(similarity_fns)):
+    #         ranks = rank_plays(comedy, td_matrix, similarity_fns[i])
+    #         sub_comedy = [c for c in comedies if c != comedy]
+    #         comedy_ranks = [ranks[rank] for rank in sub_comedy]
+    #         comedy_avg[i] += np.mean(comedy_ranks)
+    #         comedy_tragedy_ranks = [ranks[rank] for rank in tragedies]
+    #         comedy_tragedy_avg[i] += np.mean(comedy_tragedy_ranks)
+    #         comedy_history_ranks = [ranks[rank] for rank in histories]
+    #         comedy_history_avg[i] += np.mean(comedy_history_ranks)
+    # comedy_avg = [c/len(comedies) for c in comedy_avg]
+    # comedy_tragedy_avg = [t/len(comedies) for t in comedy_tragedy_avg]
+    # comedy_history_avg = [h/len(comedies) for h in comedy_history_avg]
+    # print("comedy avg")
+    # print(comedy_avg)
+    # print("comedy tragedy avg")
+    # print(comedy_tragedy_avg)
+    # print("comedy history avg")
+    # print(comedy_history_avg)
+    # print("comedy avg to all")
+    # print(np.mean(np.array([comedy_avg, comedy_tragedy_avg, comedy_history_avg]),axis=0))
+    #
+    # history_avg = [0,0,0]
+    # history_tragedy_avg = [0,0,0]
+    # history_comedy_avg = [0,0,0]
+    # for history in histories:
+    #     for i in range(len(similarity_fns)):
+    #         ranks = rank_plays(history, td_matrix, similarity_fns[i])
+    #         sub_history = [h for h in histories if h != history]
+    #         history_ranks = [ranks[rank] for rank in sub_history]
+    #         history_avg[i] += np.mean(history_ranks)
+    #         history_tragedy_ranks = [ranks[rank] for rank in tragedies]
+    #         history_tragedy_avg[i] += np.mean(history_tragedy_ranks)
+    #         history_comedy_ranks = [ranks[rank] for rank in comedies]
+    #         history_comedy_avg[i] += np.mean(history_comedy_ranks)
+    # history_avg = [h/len(histories) for h in history_avg]
+    # history_tragedy_avg = [t/len(histories) for t in history_tragedy_avg]
+    # history_comedy_avg = [c/len(histories) for c in history_comedy_avg]
+    # print("history avg")
+    # print(history_avg)
+    # print("history tragedy avg")
+    # print(history_tragedy_avg)
+    # print("history comedy avg")
+    # print(history_comedy_avg)
+    # print("history avg to all")
+    # print(np.mean(np.array([history_avg, history_comedy_avg, history_tragedy_avg]),axis=0))
 
     for sim_fn in similarity_fns:
         print('\nThe top most similar plays to "%s" using %s are:' % (document_names[random_idx], sim_fn.__qualname__))
@@ -398,3 +460,23 @@ if __name__ == '__main__':
         for idx in range(0, 10):
             word_id = ranks[idx]
             print('%d: %s' % (idx+1, vocab[word_id]))
+
+    character_name = 'iago'
+    char_to_index = dict(zip(char_names, range(0, len(char_names))))
+    for sim_fn in similarity_fns:
+        i = 0
+        print('\nThe 3 most similar characters to "%s" using %s on term character matrix are:' % (character_name, sim_fn.__qualname__))
+        ranks = rank_characters(char_to_index[character_name], term_character_matrix, sim_fn)
+        ranks = sorted(ranks, key=ranks.get, reverse=True)
+        # lists = sorted(ranks.items(), key=lambda t: t[1], reverse=True)[:10]
+        # x,y = zip(*lists)
+        # x1 = [char_names[a] for a in x]
+        # plt.bar(x1,y)
+        # plt.xlabel("Character name")
+        # plt.ylabel("Similarity score")
+        # plt.title("Characters similar to " + character_name + " scored on " + sim_fn.__qualname__)
+        # plt.show()
+        for idx in range(0, 3):
+            char_id = ranks[idx]
+            print('%d: %s' % (idx+1, char_names[char_id]))
+
