@@ -1,0 +1,1 @@
+To run code from either pytorch tutorial or for the modified cities version, go to the folder containing the appropriate code (/assignment3/pytorch_tutorial/classify/ or /assignment3/ respectively) and run python train.py to train the model yourself.  Pretrained .pt model is also provided, to use this run predict.py [your_input] is either a city or baby name you wish to classify
