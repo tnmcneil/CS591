@@ -1,3 +1,6 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import torch
 from data import *
 from model import *
@@ -78,10 +81,43 @@ for epoch in range(1, N_EPOCHS +1):
 
 torch.save(rnn, 'char-rnn-classification.pt')
 
+plt.figure()
+plt.plot(all_losses)
+plt.show()
 
 
+confusion = torch.zeros(n_categories, n_categories)
+n_confusion = 10000
+def evaluate(line_tensor):
+    hidden = rnn.init_hidden()
+    for i in range(line_tensor.size()[0]):
+        output, hidden = rnn(line_tensor[i], hidden)
+
+    return output
 
 
+# create confusion matrix
+for i in range(n_confusion):
+    category, line, category_tensor, line_tensor = random_training_pair()
+    output = evaluate(line_tensor)
+    guess, guess_i = category_from_output(output)
+    category_i = all_categories.index(category)
+    confusion[category_i][guess_i] += 1
 
+# normalize rows by dividing by sum
+for i in range(n_categories):
+    confusion[i] = confusion[i] / confusion[i].sum()
 
+fig = plt.figure()
+ax = fig.add_subplot(111)
+cax = ax.matshow(confusion.numpy())
+fig.colorbar(cax)
+
+ax.set_xticklabels([''] + all_categories, rotation=90)
+ax.set_yticklabels([''] + all_categories)
+
+ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
+ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
+
+plt.show()
 
