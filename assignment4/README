@@ -1,0 +1,8 @@
+to run the model use command python ner.py and to score use python
+conlleval.py results.txt
+
+The current submission is my unconstrained model, to run the constrained model
+comment out lines 120-125 and uncomment lines 96-100 and use the same commands
+to run and save the predictions to results.txt
+
+If you wish to save both versions rename the write to file on line 159
