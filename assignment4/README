@@ -6,3 +6,8 @@ comment out lines 120-125 and uncomment lines 96-100 and use the same commands
 to run and save the predictions to results.txt
 
 If you wish to save both versions rename the write to file on line 159
+
+Included in this submission is ner.py which has my modified code, as well as
+two text files, constrained_results.txt and unconstrained_results.txt which
+contain my predictions from my two best constrained and unconstrained models.
+And also my writeup.

@@ -93,11 +93,11 @@ if __name__ == "__main__":
     # TODO: play with other models
     # BEST CONSTRAINED MODEL
 
-    model = Perceptron(
-        alpha=0.00001,
-        max_iter=100,
-        verbose=1
-    )
+    # model = Perceptron(
+    #     alpha=0.00001,
+    #     max_iter=100,
+    #     verbose=0
+    # )
 
     # model = MLPClassifier(
     #     solver='sgd',
@@ -117,11 +117,11 @@ if __name__ == "__main__":
 
     # BEST UNCONSTRAINED MODEL
 
-    # model = SGDClassifier(
-    #     loss='hinge',
-    #     alpha=0.00001,
-    #     max_iter=100
-    # )
+    model = SGDClassifier(
+        loss='hinge',
+        alpha=0.00001,
+        max_iter=100
+    )
 
     # model = PassiveAggressiveClassifier(
     #     max_iter=100,
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     test_labels = []
 
     # switch to test_sents for your final results
-    for sent in dev_sents:
+    for sent in test_sents:
         for i in range(len(sent)):
             feats = word2features(sent,i)
             test_feats.append(feats)
@@ -156,8 +156,8 @@ if __name__ == "__main__":
     j = 0
     print("Writing to results.txt")
     # format is: word gold pred
-    with open("constrained_results.txt", "w") as out:
-        for sent in dev_sents: 
+    with open("unconstrained_results.txt", "w") as out:
+        for sent in test_sents:
             for i in range(len(sent)):
                 word = sent[i][0]
                 gold = sent[i][-1]
